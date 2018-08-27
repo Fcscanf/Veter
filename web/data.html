@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+<head>
+    <meta charset="utf-8">
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+</head>
+<body style="height: 100%; margin: 0">
+<div id="container" style="height: 100%"></div>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts-all-3.js"></script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts-stat/ecStat.min.js"></script>
+<script type="text/javascript"
+        src="http://echarts.baidu.com/gallery/vendors/echarts/extension/dataTool.min.js"></script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/china.js"></script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/world.js"></script>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ZUONbpqGBsYGXNIYHicvbAbM"></script>
+<script type="text/javascript">
+
+    var temperature;
+    var turbidity;
+    var ph;
+
+    //实时更新数据
+    $(function(){
+        function showResult(){
+            $.ajax({
+                type: "POST",
+                url:"NowDataServlet",
+                dataType: "json",
+                async: true,
+                cache: false,
+                timeout:'500',//请求超时时间
+                success: function(data) {
+                    temperature = data.temperature;
+                    turbidity = data.turbidity;
+                    ph = data.ph;
+                }
+            });
+        }
+        //循环操作
+        setInterval(function(){showResult();}, 500);
+    });
+    /**/
+
+    var dom = document.getElementById("container");
+    var myChart = echarts.init(dom);
+    var app = {};
+    option = null;
+    option = {
+        title: {
+            text: '水质监测',
+            subtext: 'demo'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross',
+                label: {
+                    backgroundColor: '#283b56'
+                }
+            }
+        },
+        legend: {
+            data: ['ph', '温度', '浑浊度']
+        },
+        toolbox: {
+            show: true,
+            feature: {
+                dataView: {readOnly: false},
+                restore: {},
+                saveAsImage: {}
+            }
+        },
+        dataZoom: {
+            show: false,
+            start: 0,
+            end: 100
+        },
+        xAxis: [
+            {
+                type: 'category',
+                boundaryGap: true,
+                //改变横坐标的时间参数
+                data: (function () {
+                    var now = new Date();
+                    var res = [];
+                    var len = 10;
+                    while (len--) {
+                        res.unshift(now.toLocaleTimeString().replace(/^\D*/, ''));
+                        now = new Date(now - 2000);
+                    }
+                    return res;
+                })()
+            },
+            {
+                type: 'category',
+                boundaryGap: true,
+                data: (function () {
+                    var res = [];
+                    var len = 10;
+                    while (len--) {
+                        res.push(len + 1);
+                    }
+                    return res;
+                })()
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value',
+                scale: true,
+                name: '摄氏度',
+                max: 150,
+                min: 0,
+                boundaryGap: [0.2, 0.2]
+            },
+            {
+                type: 'value',
+                scale: true,
+                name: 'ph/浑浊度',
+                max: 200,
+                min: 0,
+                boundaryGap: [0.2, 0.2]
+            }
+        ],
+        series: [
+            {
+                name: '温度',
+                type: 'line',
+                xAxisIndex: 1,
+                yAxisIndex: 1,
+                //改变温度的数据
+                data: (function () {
+                    var res = [];
+                    var len = 10;
+                    while (len--) {
+                        res.push(temperature);
+                        //res.push((Math.random()*100 + 5).toFixed(1) - 0);
+                    }
+                    return res;
+                })()
+            },
+            {
+                name: 'ph',
+                type: 'line',
+                //改变ph的数据
+                data: (function () {
+                    var res = [];
+                    var len = 0;
+                    while (len < 10) {
+                        res.push(ph);
+                        len++;
+                    }
+                    return res;
+                })()
+            },
+            {
+                name: '浑浊度',
+                type: 'line',
+                //改变浑浊度的数据
+                data: (function () {
+                    var res = [];
+                    var len = 0;
+                    while (len < 10) {
+                        res.push(turbidity);
+                        len++;
+                    }
+                    return res;
+                })()
+            }
+        ]
+    };
+
+    app.count = 11;
+    setInterval(function () {
+        axisData = (new Date()).toLocaleTimeString().replace(/^\D*/, '');
+
+        var data0 = option.series[0].data;
+        var data1 = option.series[1].data;
+        var data2 = option.series[2].data;
+
+        //温度、ph、浑浊度去头加尾
+        data0.shift();
+        data0.push(temperature);
+        data1.shift();
+        data1.push(ph);
+        data2.shift();
+        data2.push(turbidity);
+
+        //时间去头加尾
+        option.xAxis[0].data.shift();
+        option.xAxis[0].data.push(axisData);
+
+
+        myChart.setOption(option);
+    }, 2100);
+    ;
+    if (option && typeof option === "object") {
+        myChart.setOption(option, true);
+    }
+</script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/extension/bmap.min.js"></script>
+</body>
+</html>
